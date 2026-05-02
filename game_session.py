@@ -113,7 +113,6 @@ class QuizBowlGameSession:
     async def read_tossup(self):
 
         # if there's not a current message, we're on a new tossup
-        # TODO: instead of editing old message, might be better to make a new message?
         if not self.current_message:
             self.current_message = await self.channel.send(content=f"Tossup {self.cycle_number}")
             self.current_index = 0

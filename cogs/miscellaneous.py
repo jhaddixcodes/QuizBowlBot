@@ -21,7 +21,7 @@ class Miscellaneous(commands.Cog):
 * Use /end_game to delete a game session.
 * Use /start_game to start the game.
 * Use /next_cycle to go to the next tossup/bonus cycle.
-* Use /join_game [team] to join a game.
+* Use /join_game \[team_number] to join a game.
 * Use /leave_game to leave a game.
 * During a tossup, buzz by entering either 'buzz' or 'b' in the chat.
 * During a bonus, direct an answer by entering either 'direct', 'answer', 'd', or 'a' followed by your answer in the chat.
