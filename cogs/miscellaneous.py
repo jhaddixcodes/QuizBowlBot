@@ -15,7 +15,7 @@ class Miscellaneous(commands.Cog):
     @app_commands.command(name="help", description="Send message explaining how to use the bot.")
     async def help(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-"""
+"""r
 ```
 * Use /create_game to create a new game session.
 * Use /end_game to delete a game session.
