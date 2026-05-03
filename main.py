@@ -87,8 +87,9 @@ class QuizBowlBot(commands.Bot):
             if session.is_valid_buzz(message) and session.game_state == GameState.READ_TU:
                 await session.buzz(message)
 
-            elif session.is_valid_direct(message) and session.game_state == GameState.READ_BONUS:
-                await session.evaluate_bonus_answer(message)
+            elif session.is_valid_direct(message):
+                if session.game_state == GameState.READ_BONUS:
+                    await session.evaluate_bonus_answer(message)
 
             elif session.is_valid_score_check(message):
                 await session.score_check(message)

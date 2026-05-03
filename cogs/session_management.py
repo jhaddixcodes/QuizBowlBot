@@ -34,15 +34,9 @@ class SessionManagement(commands.Cog):
             return
 
         session = self.bot.get_session(interaction.channel)
-        if session.current_task:
-            session.current_task.cancel()
-            try:
-                await session.current_task
-            except asyncio.CancelledError:
-                pass
+        await session.end_round()
 
-        del self.bot.game_sessions[interaction.channel.id]
-        await interaction.response.send_message("ok then")
+        await interaction.response.send_message("i ended your round :)", ephemeral=True)
 
     @app_commands.command(name="join_game", description="Join the specified team in the current game session.")
     async def join_game(self, interaction: discord.Interaction, team: int):

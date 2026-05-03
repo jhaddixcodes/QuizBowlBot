@@ -456,6 +456,14 @@ class QuizBowlGameSession:
 
 
     async def end_round(self):
+        if self.current_task:
+            self.current_task.cancel()
+
+        try:
+            await self.current_task
+        except asyncio.CancelledError:
+            pass
+
         message = await self.channel.send("Round over - Final score:")
         await self.score_check(message)
         del self.bot.game_sessions[self.channel.id]
