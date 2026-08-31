@@ -1,4 +1,7 @@
 from typing import TYPE_CHECKING
+
+import qbreader.types
+
 if TYPE_CHECKING:
     from main import QuizBowlBot
 
@@ -8,8 +11,7 @@ from asyncio import Task
 from qbreader.types import Directive
 
 import discord
-from game_objects import GameState, BonusState, CustomPacket, Team
-
+from utilities import GameState, BonusState, CustomPacket, Team, html_to_markdown
 
 class QuizBowlGameSession:
     """
@@ -36,6 +38,12 @@ class QuizBowlGameSession:
 
         # the message the session wants the bot to edit
         self.current_message: discord.Message | None = None
+
+        self.current_tossup_text: str | None = None
+        self.current_bonus_text: str | None = None
+
+        # the current answerline
+        self.current_answerline: str | None = None
 
         self.current_task: Task[None] | None = None
 
@@ -100,7 +108,6 @@ class QuizBowlGameSession:
             return
 
         self.game_state = GameState.READ_TU
-
         self.current_task = asyncio.create_task(self.read_tossup())
 
     def get_power_mark_index(self, chunks: list[str]) -> int | None:
@@ -118,8 +125,9 @@ class QuizBowlGameSession:
             self.current_index = 0
 
         # split tossup into individual words
-        current_tossup = f"{self.cycle_number}. " + self.packet.tossups[self.cycle_number - 1].question_sanitized
-        words = current_tossup.split(" ")
+        self.current_tossup_text = f"{self.cycle_number}. " + self.packet.tossups[self.cycle_number - 1].question_sanitized
+        self.current_answerline = self.packet.tossups[self.cycle_number - 1].answer
+        words = self.current_tossup_text.split(" ")
 
         # next join groups of 4 words (4 words per second)
         # no error because splicing out of index just returns nothing
@@ -130,9 +138,9 @@ class QuizBowlGameSession:
         if not self.power_mark_index:
             self.power_mark_index = self.get_power_mark_index(tossup_chunks)
 
-        # remove any power marks
+        # remove any power marks and fix double spaces if they exist (probably safer than replacing " (*)" all in one go)
         for index, chunk in enumerate(tossup_chunks):
-            tossup_chunks[index] = chunk.replace("(*)", "")
+            tossup_chunks[index] = chunk.replace("(*)", "").replace("  ", " ")
 
         start_index = self.current_index
         for i in range(start_index, len(tossup_chunks)):
@@ -147,23 +155,23 @@ class QuizBowlGameSession:
     async def read_bonus(self):
         # get the current bonus part we're on
         current_bonus = self.packet.bonuses[self.cycle_number - 1]
-        response = f"{self.cycle_number}. " + current_bonus.leadin_sanitized + "\n" if self.bonus_state == BonusState.PART_1 else ""
-        response += current_bonus.parts[self.bonus_state - 1]
+        self.current_bonus_text = f"{self.cycle_number}. " + html_to_markdown(current_bonus.leadin) + "\n" if self.bonus_state == BonusState.PART_1 else ""
+        self.current_bonus_text += html_to_markdown(current_bonus.parts[self.bonus_state - 1])
 
         # split into words
-        words = response.split(" ")
+        words = self.current_bonus_text.split(" ")
 
         # join groups of 4 words
         bonus_chunks = [" ".join(words[i:i+4]) for i in range(0, len(words), 4)]
 
-        bonus_message = await self.channel.send("Bonus")
+        self.current_message = await self.channel.send("Bonus")
 
         for i in range(0, len(bonus_chunks)):
-            await bonus_message.edit(content=" ".join(bonus_chunks[0:i+1]))
+            await self.current_message.edit(content=" ".join(bonus_chunks[0:i+1]))
             await asyncio.sleep(1)
 
         self.game_state = GameState.WAIT_ANS_BONUS
-        await self.wait_for_direct(bonus_message)
+        await self.wait_for_direct(self.current_message)
 
     async def wait_for_buzz(self, tossup_message: discord.Message):
         try:
@@ -223,10 +231,14 @@ class QuizBowlGameSession:
         if self.game_state == GameState.WAIT_ANS_MID_TU:
             # check that there exist teams to buzz lol
             for team in self.teams:
-                if not team.buzzed:
+                if not team.buzzed and len(team.users) > 0:
                     self.game_state = GameState.READ_TU
                     self.current_task = asyncio.create_task(self.read_tossup())
                     return
+
+            self.current_answerline = html_to_markdown(self.current_answerline)
+
+            await self.current_message.edit(content=f"{self.current_tossup_text}\nANSWER: {self.current_answerline}")
 
             self.cycle_number += 1
             self.power_mark_index = None
@@ -241,6 +253,10 @@ class QuizBowlGameSession:
 
         # time
         elif self.game_state == GameState.WAIT_BUZZ_END_TU:
+            self.current_answerline = html_to_markdown(self.current_answerline)
+
+            await self.current_message.edit(content=f"{self.current_tossup_text}\nANSWER: {self.current_answerline}")
+
             self.cycle_number += 1
             self.power_mark_index = None
             self.game_state = GameState.BETWEEN_CYCLES
@@ -255,10 +271,14 @@ class QuizBowlGameSession:
         # time or wrong answer
         elif self.game_state == GameState.WAIT_ANS_END_TU:
             for team in self.teams:
-                if not team.buzzed:
+                if not team.buzzed and len(team.users) > 0:
                     self.game_state = GameState.WAIT_BUZZ_END_TU
                     await self.wait_for_buzz(self.current_message)
                     return
+
+            self.current_answerline = html_to_markdown(self.current_answerline)
+
+            await self.current_message.edit(content=f"{self.current_tossup_text}\nANSWER: {self.current_answerline}")
 
             self.cycle_number += 1
             self.power_mark_index = None
@@ -273,17 +293,27 @@ class QuizBowlGameSession:
 
         # bonus
         elif self.game_state in (GameState.READ_BONUS, GameState.WAIT_ANS_BONUS):
+            bonus_answerline = html_to_markdown(self.packet.bonuses[self.cycle_number - 1].answers[self.bonus_state - 1])
+
+            await self.current_message.edit(content=f"{self.current_bonus_text}\nANSWER: {bonus_answerline}")
             await self.advance_bonus()
 
     async def right(self):
         # answer tossup
         if self.game_state in (GameState.WAIT_ANS_MID_TU, GameState.WAIT_ANS_END_TU):
+            self.current_answerline = html_to_markdown(self.current_answerline)
+
+            await self.current_message.edit(content=f"{self.current_tossup_text}\nANSWER: {self.current_answerline}")
+
             self.current_message = None
             self.game_state = GameState.READ_BONUS
             self.current_task = asyncio.create_task(self.read_bonus())
 
         # bonus
         elif self.game_state in (GameState.READ_BONUS, GameState.WAIT_ANS_BONUS):
+            bonus_answerline = html_to_markdown(self.packet.bonuses[self.cycle_number - 1].answers[self.bonus_state - 1])
+
+            await self.current_message.edit(content=f"{self.current_bonus_text}\nANSWER: {bonus_answerline}")
             await self.advance_bonus()
 
     def is_valid_buzz(self, message: discord.Message):
@@ -379,12 +409,11 @@ class QuizBowlGameSession:
         await message.reply(f"i have {message.author}. answer?")
         try:
             user_answer = await self.bot.wait_for("message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=8)
-            answerline = self.packet.tossups[self.cycle_number - 1].answer
-            judgement = await self.bot.qbreader_client.check_answer(answerline, user_answer.content)
+            judgement = await self.bot.qbreader_client.check_answer(self.current_answerline, user_answer.content)
             while judgement.directive == Directive.PROMPT:
                 await user_answer.reply(judgement.directed_prompt or "prompt")
                 user_answer = await self.bot.wait_for("message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=5)
-                judgement = await self.bot.qbreader_client.check_answer(answerline, user_answer.content)
+                judgement = await self.bot.qbreader_client.check_answer(self.current_answerline, user_answer.content)
 
             if judgement.directive == Directive.ACCEPT:
                 team = self.get_team_from_user(message.author)
@@ -401,13 +430,13 @@ class QuizBowlGameSession:
             elif judgement.directive == Directive.REJECT:
 
                 # has another team buzzed?
-                first_interrupt = True
+                is_first_interrupt = True
                 for team in self.teams:
                     if team.buzzed and team != self.get_team_from_user(message.author):
-                        first_interrupt = False
+                        is_first_interrupt = False
 
                 # is it the end of the tossup?
-                if self.game_state == GameState.WAIT_ANS_END_TU or not first_interrupt:
+                if self.game_state == GameState.WAIT_ANS_END_TU or not is_first_interrupt:
                     await user_answer.reply("incorrect, no penalty")
                 else:
                     await user_answer.reply("neg 5")
@@ -459,10 +488,10 @@ class QuizBowlGameSession:
         if self.current_task:
             self.current_task.cancel()
 
-        try:
-            await self.current_task
-        except asyncio.CancelledError:
-            pass
+            try:
+                await self.current_task
+            except asyncio.CancelledError:
+                pass
 
         message = await self.channel.send("Round over - Final score:")
         await self.score_check(message)

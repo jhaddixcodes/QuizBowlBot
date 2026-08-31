@@ -17,8 +17,9 @@ from os import getenv
 
 # qbreader api
 from qbreader.asynchronous import Async as QBReaderAsync
+from qbreader.types import Year
 
-from game_objects import GameState
+from utilities import GameState
 from game_session import CustomPacket, QuizBowlGameSession
 
 class QuizBowlBot(commands.Bot):
@@ -45,12 +46,12 @@ class QuizBowlBot(commands.Bot):
     def get_session(self, channel: discord.TextChannel):
         return self.game_sessions[channel.id]
 
-    async def collect_random_packet(self, difficulties=None, categories=None, subcategories=None):
+    async def collect_random_packet(self, difficulties=None, categories=None, subcategories=None, alternate_subcategories=None, min_year=Year.MIN_YEAR, max_year=Year.CURRENT_YEAR, number=20):
         """
         :return: Packet with 20 tossups and 20 bonuses based on the given filters
         """
-        tossups = await self.qbreader_client.random_tossup(difficulties=difficulties, categories=categories, subcategories=subcategories, number=20)
-        bonuses = await self.qbreader_client.random_bonus(difficulties=difficulties, categories=categories, subcategories=subcategories, number=20, three_part_bonuses=True)
+        tossups = await self.qbreader_client.random_tossup(difficulties=difficulties, categories=categories, subcategories=subcategories, alternate_subcategories=alternate_subcategories, min_year=min_year, max_year=max_year, number=number)
+        bonuses = await self.qbreader_client.random_bonus(difficulties=difficulties, categories=categories, subcategories=subcategories, alternate_subcategories=alternate_subcategories, min_year=min_year, max_year=max_year, number=number, three_part_bonuses=True)
 
         return CustomPacket(tossups, bonuses)
 

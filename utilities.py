@@ -2,7 +2,6 @@ import discord
 import qbreader.types as types
 from enum import StrEnum, IntEnum
 
-
 class GameState(StrEnum):
     IDLE = "idle"
     PAUSED = "paused"
@@ -44,3 +43,15 @@ class Team:
 
     def remove_player(self, user: discord.User):
         self.users.remove(user)
+
+def html_to_markdown(text: str):
+    return (text
+            .replace("<b>", "**")
+            .replace("</b>", "**")
+            .replace("<i>", "*")
+            .replace("</i>", "*")
+            .replace("<em>", "*")
+            .replace("</em>", "*")
+            .replace("<u>", "__")
+            .replace("</u>", "__")
+            )
