@@ -3,20 +3,16 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from main import QuizBowlBot
 
-import asyncio
-
 import discord
 from discord.ext import commands
 from discord import app_commands
 
-from game_session import QuizBowlGameSession
+from view_utilities import Settings, ModeSelectView
 
 class SessionManagement(commands.Cog):
     def __init__(self, bot: QuizBowlBot):
         self.bot = bot
         super().__init__()
-
-    # TODO: more parameters, more advanced interactions
 
     @app_commands.command(name="create_game", description="Create a game session.")
     async def create_game(self, interaction: discord.Interaction):
@@ -24,9 +20,9 @@ class SessionManagement(commands.Cog):
             await interaction.response.send_message("nice try buddy, there's a game here already", ephemeral=True)
             return
 
-        packet = await self.bot.collect_random_packet(difficulties = ["3"], categories=["Literature"], subcategories=["Other Science"])
-        self.bot.game_sessions[interaction.channel.id] = QuizBowlGameSession(interaction.user, packet, self.bot, interaction.channel)
-        await interaction.response.send_message("ok made your game session :)")
+        settings = Settings()
+        settings.owner_id = interaction.user.id
+        await interaction.response.send_message("Select game mode.", view=ModeSelectView(settings))
 
 
     @app_commands.command(name="end_game", description="End a game session.")

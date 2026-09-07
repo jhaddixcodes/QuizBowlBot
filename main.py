@@ -55,6 +55,12 @@ class QuizBowlBot(commands.Bot):
 
         return CustomPacket(tossups, bonuses)
 
+    async def get_set_list(self):
+        return await self.qbreader_client.set_list()
+
+    async def get_num_packets(self, set_name: str):
+        return await self.qbreader_client.num_packets(set_name)
+
     async def collect_specific_packet(self, set_name, packet_number):
         """
         Get a specific packet from set name and packet number
@@ -64,7 +70,6 @@ class QuizBowlBot(commands.Bot):
         """
         packet = await self.qbreader_client.packet(set_name, packet_number)
         return CustomPacket(packet.tossups, packet.bonuses)
-
 
     async def setup_hook(self):
 

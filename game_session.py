@@ -287,7 +287,7 @@ class QuizBowlGameSession:
             for team in self.teams:
                 team.buzzed = False
 
-            if self.cycle_number > len(self.packet.tossups):
+            if self.cycle_number > len(self.packet.tossups) or self.cycle_number > len(self.packet.bonuses):
                 # game is over
                 await self.end_round()
 
