@@ -111,6 +111,3 @@ def strings_approximately_match(search, set_name):
             return False # no match, the token can't be found so user probably searched some bullshit like "some bullshit"
     # yippee!
     return True
-
-print(levenshtein_distance("ACF", "AFC"))
-print(strings_match("2025 AFC Fack", "2025 ACF Fall"))
