@@ -107,7 +107,6 @@ def strings_approximately_match(search, set_name):
                     break
             if match:
                 continue # great, let's check the other tokens
-            print(f"no match found for '{search_token}'")
             return False # no match, the token can't be found so user probably searched some bullshit like "some bullshit"
     # yippee!
     return True
