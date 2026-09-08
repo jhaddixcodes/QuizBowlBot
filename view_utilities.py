@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 from game_session import QuizBowlGameSession
 
-from utilities import levenshtein_distance
+from utilities import strings_approximately_match
 
 DIFFICULTY_OPTIONS = [
     "0: Pop Culture",
@@ -583,39 +583,12 @@ class SetSearchModal(discord.ui.Modal):
                     break
                 continue
 
-            # well, fuck. that didn't work, did it? let's try tokenizing
-            # the list comprehension means if some moron hits space four times, nothing insane happens
-            search_tokens = [x for x in search.split(" ") if x.strip()]
-            mismatch = False
-            for search_token in search_tokens:
-                if search_token not in set_name:
-                    # well, maybe they misspelled it. first we'll make sure the token isn't a year because we don't want to match 2025 and 2024.
-                    try:
-                        _ = int(search_token) # i can't believe you can do that
-                    except ValueError:
-                        pass # phew
-                    else:
-                        # i hope it's a year
-                        mismatch = True
-                        break
-                    # now let's try tokenizing the set name and seeing what happens
-                    set_tokens = set_name.split(" ")
-                    match = False
-                    for set_token in set_tokens:
-                        if levenshtein_distance(search_token, set_token) < 2:
-                            match = True
-                            break
-                    if match:
-                        continue # great, let's check the other tokens
-                    mismatch = True
+            # well, fuck. that didn't work, did it? let's try this
+            if strings_approximately_match(search, set_name):
+                search_results.append(set_name)
+                if len(search_results) >= 25:
                     break
-            # i give up
-            if mismatch:
                 continue
-            # yippee!
-            search_results.append(set_name)
-            if len(search_results) >= 25:
-                break
 
         # wow, somebody here is an idiot.
         if len(search_results) == 0:

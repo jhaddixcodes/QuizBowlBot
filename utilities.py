@@ -82,3 +82,35 @@ def levenshtein_distance(a: str, b: str):
                 table[i][j] = min(table[i - 1][j - 1], table[i - 1][j], table[i][j - 1]) + 1
 
     return table[len(a)][len(b)]
+
+def strings_approximately_match(search, set_name):
+    # the list comprehension means if some moron hits space four times, nothing insane happens
+    search_tokens = search.split()
+
+    for search_token in search_tokens:
+        if search_token not in set_name: # we want all the words in the search to be found at some point in the set name
+            # if a token wasn't found, well, maybe they misspelled it.
+            try:
+                _ = int(search_token) # first we'll make sure the token isn't a year because we don't want to match 2025 and 2024.
+            except ValueError:
+                pass # an error, so the token isn't a number and can't be a year
+            else:
+                # if there's a non-year number in the string, we're fucked, but i figure that's not a big problem
+                return False
+
+            # now let's see if maybe one of the words in the set name approximately match
+            set_tokens = set_name.split()
+            match = False
+            for set_token in set_tokens:
+                if levenshtein_distance(search_token, set_token) < 3:
+                    match = True
+                    break
+            if match:
+                continue # great, let's check the other tokens
+            print(f"no match found for '{search_token}'")
+            return False # no match, the token can't be found so user probably searched some bullshit like "some bullshit"
+    # yippee!
+    return True
+
+print(levenshtein_distance("ACF", "AFC"))
+print(strings_match("2025 AFC Fack", "2025 ACF Fall"))
