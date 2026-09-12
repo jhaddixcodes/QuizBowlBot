@@ -114,7 +114,7 @@ async def main():
     discord_client = None
 
     logger = logging.getLogger('discord')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.WARNING)
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)
@@ -122,8 +122,14 @@ async def main():
     try:
         discord_client = await QuizBowlBot.create()
         await discord_client.start(token)
+    except asyncio.CancelledError:
+        try:
+            pass
+        except KeyboardInterrupt:
+            pass
     finally:
         if discord_client is not None:
             await discord_client.end()
+        print("Goodbye!")
 
 asyncio.run(main())

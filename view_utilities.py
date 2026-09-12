@@ -113,7 +113,8 @@ ALTERNATE_SUBCATEGORY_OPTIONS = {
 
 class Settings:
     def __init__(self):
-        self.owner_id = 0
+        self.message: discord.InteractionMessage | None = None
+        self.owner_id: int = 0
 
         # random questions or specific set
         self.mode: str | None = None
@@ -171,6 +172,9 @@ class ModeSelectView(discord.ui.View):
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
 
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
+
     @discord.ui.button(
         label="Cancel",
         style=discord.ButtonStyle.danger,
@@ -212,7 +216,7 @@ class DiffCatSelectView(discord.ui.View):
         )
         async def difficulty_callback(interaction: discord.Interaction):
             await interaction.response.defer()
-            self.settings.difficulties = difficulty_select.values
+            self.settings.difficulties = [value[0] for value in difficulty_select.values]
 
         difficulty_select.callback = difficulty_callback
 
@@ -242,6 +246,9 @@ class DiffCatSelectView(discord.ui.View):
 
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
+
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
 
     @discord.ui.button(
         label="Cancel",
@@ -356,6 +363,9 @@ class SubcatSelectView(discord.ui.View):
 
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
+
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
 
     @discord.ui.button(
         label="Cancel",
@@ -508,6 +518,9 @@ class AltSubcatSelectView(discord.ui.View):
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
 
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
+
     @discord.ui.button(
         label="Set Year Range",
         style=discord.ButtonStyle.primary,
@@ -611,6 +624,9 @@ class SetSearchView(discord.ui.View):
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
 
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
+
     @discord.ui.button(
         label="Set Search",
         style=discord.ButtonStyle.primary,
@@ -681,6 +697,9 @@ class SetSelectView(discord.ui.View):
         await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
         return False
 
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
+
     @discord.ui.button(
         label="Cancel",
         style=discord.ButtonStyle.danger,
@@ -736,6 +755,16 @@ class PacketSelectView(discord.ui.View):
         packet_select.callback = packet_callback
 
         self.add_item(packet_select)
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.settings.owner_id:
+            return True
+
+        await interaction.response.send_message("erm, you aren't the owner of this game", ephemeral=True)
+        return False
+
+    async def on_timeout(self):
+        await self.settings.message.edit(content="you took too long, try again.", view=None)
 
     @discord.ui.button(
         label="Cancel",

@@ -20,9 +20,13 @@ class SessionManagement(commands.Cog):
             await interaction.response.send_message("nice try buddy, there's a game here already", ephemeral=True)
             return
 
+        await interaction.response.send_message("Select game mode.")
+
         settings = Settings()
+        settings.message = await interaction.original_response()
         settings.owner_id = interaction.user.id
-        await interaction.response.send_message("Select game mode.", view=ModeSelectView(settings))
+
+        await settings.message.edit(content="Select game mode.", view=ModeSelectView(settings))
 
 
     @app_commands.command(name="end_game", description="End a game session.")

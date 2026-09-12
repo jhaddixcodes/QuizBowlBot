@@ -47,13 +47,19 @@ class Team:
 
 def html_to_markdown(text: str):
     return (text
+            .replace("<b> ", "**") # remove spaces after the tag because markdown doesn't work if that happens
             .replace("<b>", "**")
+            .replace(" </b>", "**") # same but before
             .replace("</b>", "**")
+            .replace("<i> ", "*")
+            .replace("<i>", "*")
+            .replace(" </i>", "*")
+            .replace("</i>", "*")
             .replace("<i>", "*")
             .replace("</i>", "*")
-            .replace("<em>", "*")
-            .replace("</em>", "*")
+            .replace("<u> ", "__")
             .replace("<u>", "__")
+            .replace(" </u>", "__")
             .replace("</u>", "__")
             )
 
